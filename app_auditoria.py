@@ -16,7 +16,7 @@ st.set_page_config(
 def cargar_recursos():
     """Carga el modelo, scaler y datos históricos"""
     try:
-        base_global = pd.read_csv('base_global_unificada.csv')
+        base_global = pd.read_csv('base_global_unificada.csv.gz', compression='gzip')
         base_global['MesFecha'] = pd.to_datetime(base_global['MesFecha'])
         return base_global
     except Exception as e:
