@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 
 # ============================================
 # CONFIGURACION
@@ -17,15 +18,13 @@ st.set_page_config(
 )
 
 # ============================================
-# ESTILOS CSS PROFESIONALES - SWISS MEDICAL
+# ESTILOS CSS PROFESIONALES
 # ============================================
 
 st.markdown("""
 <style>
-    /* Importar fuente profesional */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    /* Variables globales */
     :root {
         --sm-red: #E31E24;
         --sm-dark-red: #B71C1C;
@@ -38,78 +37,46 @@ st.markdown("""
         --border-color: #3A3F4B;
     }
     
-    /* Reset de estilos base */
     * {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    /* Background principal */
     .stApp {
         background-color: var(--bg-primary);
     }
     
-    /* Headers */
-    h1, h2, h3, h4, h5, h6 {
+    h1, h2, h3 {
         color: var(--text-primary) !important;
         font-weight: 600 !important;
-        letter-spacing: -0.02em;
     }
     
-    h1 {
-        font-size: 2.5rem !important;
-        margin-bottom: 0.5rem !important;
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
     }
     
-    /* Subtitulo con linea roja */
-    .subtitle {
-        color: var(--text-secondary);
-        font-size: 1rem;
-        font-weight: 400;
-        border-bottom: 2px solid var(--sm-red);
-        padding-bottom: 1rem;
-        margin-bottom: 2rem;
-    }
-    
-    /* Contenedor de secciones */
-    .section-container {
-        background: var(--bg-secondary);
+    .stTabs [data-baseweb="tab"] {
+        background-color: var(--bg-tertiary);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin: 1rem 0;
+        border-radius: 6px;
+        padding: 10px 20px;
+        color: var(--text-secondary);
+        font-weight: 500;
     }
     
-    /* Inputs */
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, var(--sm-red) 0%, var(--sm-dark-red) 100%);
+        color: white;
+        border-color: var(--sm-red);
+    }
+    
     .stTextInput > div > div > input,
-    .stSelectbox > div > div > select,
-    .stNumberInput > div > div > input {
+    .stSelectbox > div > div > select {
         background-color: var(--bg-tertiary) !important;
         border: 1px solid var(--border-color) !important;
         color: var(--text-primary) !important;
         border-radius: 4px !important;
-        font-size: 0.95rem !important;
     }
     
-    .stTextInput > div > div > input:focus,
-    .stSelectbox > div > div > select:focus,
-    .stNumberInput > div > div > input:focus {
-        border-color: var(--sm-red) !important;
-        box-shadow: 0 0 0 1px var(--sm-red) !important;
-    }
-    
-    /* Labels */
-    .stTextInput > label,
-    .stSelectbox > label,
-    .stNumberInput > label,
-    .stDateInput > label {
-        color: var(--text-secondary) !important;
-        font-size: 0.85rem !important;
-        font-weight: 500 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    /* Boton principal */
     .stButton > button {
         background: linear-gradient(135deg, var(--sm-red) 0%, var(--sm-dark-red) 100%) !important;
         color: white !important;
@@ -117,75 +84,20 @@ st.markdown("""
         border-radius: 6px !important;
         padding: 0.75rem 2rem !important;
         font-weight: 600 !important;
-        font-size: 1rem !important;
-        letter-spacing: 0.03em !important;
         text-transform: uppercase !important;
-        transition: all 0.3s ease !important;
         box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3) !important;
     }
     
     .stButton > button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 16px rgba(227, 30, 36, 0.4) !important;
     }
     
-    /* Metricas */
     .metric-card {
         background: var(--bg-secondary);
         border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 1.25rem;
         text-align: center;
-    }
-    
-    .metric-label {
-        color: var(--text-secondary);
-        font-size: 0.8rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-value {
-        color: var(--text-primary);
-        font-size: 2rem;
-        font-weight: 700;
-        margin: 0.5rem 0;
-    }
-    
-    .metric-delta {
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-    
-    .metric-delta.positive {
-        color: var(--sm-light-red);
-    }
-    
-    .metric-delta.negative {
-        color: #4CAF50;
-    }
-    
-    /* Alertas de estado */
-    .alert-normal {
-        background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
-        border-left: 4px solid #4CAF50;
-    }
-    
-    .alert-warning {
-        background: linear-gradient(135deg, #E65100 0%, #F57C00 100%);
-        border-left: 4px solid #FF9800;
-    }
-    
-    .alert-danger {
-        background: linear-gradient(135deg, var(--sm-dark-red) 0%, var(--sm-red) 100%);
-        border-left: 4px solid var(--sm-light-red);
-    }
-    
-    .alert-info {
-        background: linear-gradient(135deg, #01579B 0%, #0277BD 100%);
-        border-left: 4px solid #03A9F4;
     }
     
     .alert-box {
@@ -195,155 +107,38 @@ st.markdown("""
         color: white;
     }
     
-    .alert-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
+    .alert-normal { background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%); }
+    .alert-warning { background: linear-gradient(135deg, #E65100 0%, #F57C00 100%); }
+    .alert-danger { background: linear-gradient(135deg, var(--sm-dark-red) 0%, var(--sm-red) 100%); }
+    .alert-info { background: linear-gradient(135deg, #01579B 0%, #0277BD 100%); }
     
-    .alert-message {
-        font-size: 1rem;
-        font-weight: 400;
-        opacity: 0.95;
-    }
-    
-    /* Sidebar */
     [data-testid="stSidebar"] {
         background-color: var(--bg-secondary);
         border-right: 1px solid var(--border-color);
     }
     
-    [data-testid="stSidebar"] .block-container {
-        padding-top: 2rem;
-    }
-    
-    /* Expanders */
-    .streamlit-expanderHeader {
-        background-color: var(--bg-tertiary) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 6px !important;
-        color: var(--text-primary) !important;
-        font-weight: 500 !important;
-    }
-    
-    .streamlit-expanderHeader:hover {
-        border-color: var(--sm-red) !important;
-    }
-    
-    /* Tablas */
-    .dataframe {
-        background-color: var(--bg-secondary) !important;
-        border: 1px solid var(--border-color) !important;
-    }
-    
-    .dataframe th {
-        background-color: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.05em;
-    }
-    
-    .dataframe td {
-        color: var(--text-primary) !important;
-        border-color: var(--border-color) !important;
-    }
-    
-    /* Divisor */
-    hr {
-        border-color: var(--border-color) !important;
-        margin: 2rem 0 !important;
-    }
-    
-    /* Footer */
-    .footer {
-        text-align: center;
-        padding: 2rem 0;
-        color: var(--text-secondary);
-        font-size: 0.85rem;
-        border-top: 1px solid var(--border-color);
-        margin-top: 3rem;
-    }
-    
-    /* Comparacion lado a lado */
-    .comparison-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-        margin: 2rem 0;
-    }
-    
-    .model-panel {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1.5rem;
-    }
-    
-    .model-title {
-        color: var(--text-primary);
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 2px solid var(--sm-red);
-    }
-    
-    /* Matriz de decision */
-    .decision-matrix {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 2rem;
-        margin: 2rem 0;
-    }
-    
-    .matrix-title {
-        color: var(--text-primary);
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 1.5rem;
-        text-align: center;
-    }
-    
-    /* Ocultar elementos de Streamlit por defecto */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
-    /* Spinner personalizado */
-    .stSpinner > div {
-        border-top-color: var(--sm-red) !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# FUNCIONES DE CARGA DE DATOS
+# FUNCIONES DE CARGA
 # ============================================
 
-@st.cache_resource
-def cargar_datos_personal():
-    """Carga datos del modelo personal (XGBoost/ML)"""
+@st.cache_data
+def cargar_datos():
+    """Carga datos del sistema"""
     try:
         df = pd.read_csv('base_global_unificada.csv.gz', compression='gzip', encoding='utf-8')
         df['MesFecha'] = pd.to_datetime(df['MesFecha'])
+        df['CM'] = pd.to_numeric(df['CM'], errors='coerce')
+        df['PU'] = pd.to_numeric(df['PU'], errors='coerce')
+        df['Q'] = pd.to_numeric(df['Q'], errors='coerce')
         return df
     except Exception as e:
-        st.error(f"Error cargando datos personales: {e}")
+        st.error(f"Error cargando datos: {e}")
         return None
-
-@st.cache_resource
-def cargar_datos_grupo():
-    """Carga datos del modelo del grupo (TensorFlow NN)"""
-    try:
-        # Asumiendo que existe un CSV similar para el modelo del grupo
-        df = pd.read_csv('base_grupo_unificada.csv.gz', compression='gzip', encoding='utf-8')
-        df['MesFecha'] = pd.to_datetime(df['MesFecha'])
-        return df
-    except Exception as e:
-        # Si no existe, usar los mismos datos por ahora
-        return cargar_datos_personal()
 
 # ============================================
 # FUNCIONES DE ANALISIS
@@ -353,7 +148,7 @@ def buscar_historico(base, prestador, prestacion):
     """Busca historico de una prestacion"""
     mask = base['ID'].astype(str).str.upper() == str(prestador).upper()
     
-    if 'Prestacion' in base.columns:
+    if prestacion and 'Prestacion' in base.columns:
         prestacion_clean = str(prestacion).upper().strip()
         mask &= base['Prestacion'].astype(str).str.upper().str.contains(
             prestacion_clean[:30], na=False, regex=False
@@ -368,7 +163,6 @@ def calcular_estadisticas(hist, fecha_auditoria):
     if len(d) < 2:
         return None
     
-    d['CM'] = pd.to_numeric(d['CM'], errors='coerce')
     d = d.dropna(subset=['CM'])
     
     if len(d) == 0:
@@ -389,22 +183,135 @@ def calcular_estadisticas(hist, fecha_auditoria):
     }
 
 def clasificar_anomalia(z_score):
-    """Clasifica el nivel de anomalia basado en Z-score"""
+    """Clasifica el nivel de anomalia"""
     if abs(z_score) < 1:
         return "NORMAL", "alert-normal", "Dentro del rango esperado"
     elif abs(z_score) < 2:
-        return "REVISAR", "alert-warning", "Desviacion moderada - Requiere justificacion"
+        return "REVISAR", "alert-warning", "Desviacion moderada"
     else:
         if z_score > 0:
-            return "ALERTA ALTA", "alert-danger", "Sobrecosto significativo - Auditoria obligatoria"
+            return "ALERTA ALTA", "alert-danger", "Sobrecosto significativo"
         else:
-            return "INUSUAL BAJO", "alert-info", "Costo muy bajo - Verificar si es correcto"
+            return "INUSUAL BAJO", "alert-info", "Costo muy bajo"
 
-def crear_grafico_distribucion(stats, importe_cm, titulo):
-    """Crea grafico de distribucion con la posicion del importe consultado"""
+# ============================================
+# FUNCIONES DE GRAFICOS
+# ============================================
+
+def crear_grafico_evolucion_cm(df_prestador):
+    """Crea grafico de evolucion de CM por prestacion"""
+    
+    # Filtrar datos con CM valido
+    df_plot = df_prestador[df_prestador['CM'].notna()].copy()
+    df_plot = df_plot.sort_values('MesFecha')
+    
+    # Agrupar por prestacion y fecha
+    df_agg = df_plot.groupby(['MesFecha', 'Prestacion'])['CM'].sum().reset_index()
+    
+    # Top prestaciones por volumen total
+    top_prestaciones = df_plot.groupby('Prestacion')['CM'].sum().nlargest(10).index.tolist()
+    df_top = df_agg[df_agg['Prestacion'].isin(top_prestaciones)]
+    
     fig = go.Figure()
     
-    # Histograma de datos historicos
+    for prestacion in top_prestaciones:
+        data = df_top[df_top['Prestacion'] == prestacion]
+        fig.add_trace(go.Scatter(
+            x=data['MesFecha'],
+            y=data['CM'],
+            mode='lines+markers',
+            name=prestacion[:40],
+            hovertemplate='<b>%{fullData.name}</b><br>Fecha: %{x}<br>CM: $%{y:,.2f}<extra></extra>'
+        ))
+    
+    fig.update_layout(
+        title="Evolucion Temporal del Costo Medico (CM) - Top 10 Prestaciones",
+        xaxis_title="Mes",
+        yaxis_title="Costo Medico (CM)",
+        template="plotly_dark",
+        height=500,
+        hovermode='x unified',
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    return fig
+
+def crear_grafico_variacion_pu(df_prestador):
+    """Crea grafico de variacion de precio unitario"""
+    
+    df_plot = df_prestador[df_prestador['PU'].notna()].copy()
+    df_plot = df_plot.sort_values('MesFecha')
+    
+    # Calcular variacion porcentual mensual
+    df_plot['PU_pct_change'] = df_plot.groupby('Prestacion')['PU'].pct_change() * 100
+    
+    # Top prestaciones
+    top_prestaciones = df_plot.groupby('Prestacion')['CM'].sum().nlargest(10).index.tolist()
+    df_top = df_plot[df_plot['Prestacion'].isin(top_prestaciones)]
+    
+    fig = make_subplots(
+        rows=2, cols=1,
+        subplot_titles=("Precio Unitario (PU)", "Variacion Mensual (%)"),
+        vertical_spacing=0.12,
+        row_heights=[0.6, 0.4]
+    )
+    
+    for prestacion in top_prestaciones:
+        data = df_top[df_top['Prestacion'] == prestacion]
+        
+        # Grafico de PU
+        fig.add_trace(
+            go.Scatter(
+                x=data['MesFecha'],
+                y=data['PU'],
+                mode='lines',
+                name=prestacion[:40],
+                showlegend=True,
+                hovertemplate='%{y:,.2f}'
+            ),
+            row=1, col=1
+        )
+        
+        # Grafico de variacion
+        fig.add_trace(
+            go.Bar(
+                x=data['MesFecha'],
+                y=data['PU_pct_change'],
+                name=prestacion[:40],
+                showlegend=False,
+                hovertemplate='%{y:+.1f}%'
+            ),
+            row=2, col=1
+        )
+    
+    fig.update_xaxes(title_text="Mes", row=2, col=1)
+    fig.update_yaxes(title_text="Precio Unitario ($)", row=1, col=1)
+    fig.update_yaxes(title_text="Variacion (%)", row=2, col=1)
+    
+    fig.update_layout(
+        title="Analisis de Variacion de Precios Unitarios",
+        template="plotly_dark",
+        height=700,
+        showlegend=True,
+        hovermode='x unified',
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    return fig
+
+def crear_grafico_distribucion(stats, importe_cm, titulo):
+    """Crea grafico de distribucion"""
+    fig = go.Figure()
+    
     fig.add_trace(go.Histogram(
         x=stats['datos'],
         name='Distribucion Historica',
@@ -412,7 +319,6 @@ def crear_grafico_distribucion(stats, importe_cm, titulo):
         nbinsx=30
     ))
     
-    # Linea vertical del importe consultado
     fig.add_vline(
         x=importe_cm,
         line_dash="dash",
@@ -422,7 +328,6 @@ def crear_grafico_distribucion(stats, importe_cm, titulo):
         annotation_position="top"
     )
     
-    # Lineas de referencia
     fig.add_vline(
         x=stats['promedio'],
         line_dash="dot",
@@ -438,73 +343,100 @@ def crear_grafico_distribucion(stats, importe_cm, titulo):
         yaxis_title="Frecuencia",
         template="plotly_dark",
         height=400,
-        showlegend=True,
         paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Inter", size=12, color="#FAFAFA")
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     
     return fig
 
-def crear_matriz_decision(resultado1, resultado2):
-    """Crea matriz de decision visual comparando ambos modelos"""
+def crear_grafico_boxplot(df_prestador):
+    """Crea boxplot comparativo de prestaciones"""
     
-    # Mapeo de clasificaciones
-    clasificaciones = {
-        "NORMAL": 0,
-        "REVISAR": 1,
-        "INUSUAL BAJO": 2,
-        "ALERTA ALTA": 3
-    }
+    df_plot = df_prestador[df_prestador['CM'].notna()].copy()
+    top_prestaciones = df_plot.groupby('Prestacion')['CM'].sum().nlargest(10).index.tolist()
+    df_top = df_plot[df_plot['Prestacion'].isin(top_prestaciones)]
     
-    # Matriz de decision
-    matriz_texto = [
-        ["APROBAR", "REVISAR", "REVISAR", "RECHAZAR"],
-        ["REVISAR", "REVISAR", "AUDITORIA", "RECHAZAR"],
-        ["REVISAR", "AUDITORIA", "REVISAR", "AUDITORIA"],
-        ["RECHAZAR", "RECHAZAR", "AUDITORIA", "RECHAZAR"]
-    ]
+    fig = go.Figure()
     
-    matriz_colores = [
-        [0.2, 0.5, 0.5, 0.9],
-        [0.5, 0.5, 0.7, 0.9],
-        [0.5, 0.7, 0.5, 0.7],
-        [0.9, 0.9, 0.7, 0.9]
-    ]
+    for prestacion in top_prestaciones:
+        data = df_top[df_top['Prestacion'] == prestacion]['CM']
+        fig.add_trace(go.Box(
+            y=data,
+            name=prestacion[:40],
+            boxmean='sd'
+        ))
+    
+    fig.update_layout(
+        title="Distribucion de Costos por Prestacion (Boxplot)",
+        yaxis_title="Costo Medico (CM)",
+        template="plotly_dark",
+        height=500,
+        showlegend=True,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    return fig
+
+def crear_tabla_resumen(df_prestador):
+    """Crea tabla resumen de prestaciones"""
+    
+    df_plot = df_prestador[df_prestador['CM'].notna()].copy()
+    
+    resumen = df_plot.groupby('Prestacion').agg({
+        'CM': ['count', 'sum', 'mean', 'std', 'min', 'max'],
+        'PU': 'mean',
+        'Q': 'sum'
+    }).round(2)
+    
+    resumen.columns = ['N_Registros', 'CM_Total', 'CM_Promedio', 'CM_Std', 'CM_Min', 'CM_Max', 'PU_Promedio', 'Q_Total']
+    resumen = resumen.sort_values('CM_Total', ascending=False)
+    
+    # Calcular variacion de PU
+    variacion_pu = df_plot.groupby('Prestacion').apply(
+        lambda x: ((x['PU'].iloc[-1] - x['PU'].iloc[0]) / x['PU'].iloc[0] * 100) if len(x) > 1 else 0
+    ).round(1)
+    
+    resumen['Variacion_PU_%'] = variacion_pu
+    
+    return resumen.head(20)
+
+def crear_heatmap_temporal(df_prestador):
+    """Crea heatmap de actividad temporal"""
+    
+    df_plot = df_prestador[df_prestador['CM'].notna()].copy()
+    df_plot['Año'] = df_plot['MesFecha'].dt.year
+    df_plot['Mes'] = df_plot['MesFecha'].dt.month
+    
+    # Top 10 prestaciones
+    top_prestaciones = df_plot.groupby('Prestacion')['CM'].sum().nlargest(10).index.tolist()
+    df_top = df_plot[df_plot['Prestacion'].isin(top_prestaciones)]
+    
+    # Pivot para heatmap
+    pivot = df_top.pivot_table(
+        values='CM',
+        index='Prestacion',
+        columns='MesFecha',
+        aggfunc='sum',
+        fill_value=0
+    )
     
     fig = go.Figure(data=go.Heatmap(
-        z=matriz_colores,
-        x=['NORMAL', 'REVISAR', 'INUSUAL', 'ALERTA'],
-        y=['NORMAL', 'REVISAR', 'INUSUAL', 'ALERTA'],
-        text=matriz_texto,
-        texttemplate="%{text}",
-        textfont={"size": 14, "family": "Inter", "color": "white"},
-        colorscale=[[0, '#2E7D32'], [0.5, '#F57C00'], [1, '#B71C1C']],
-        showscale=False
+        z=pivot.values,
+        x=pivot.columns.strftime('%Y-%m'),
+        y=[p[:40] for p in pivot.index],
+        colorscale='Reds',
+        hovertemplate='Prestacion: %{y}<br>Mes: %{x}<br>CM: $%{z:,.0f}<extra></extra>'
     ))
     
     fig.update_layout(
-        title="Matriz de Decision: Modelo 1 (Y) vs Modelo 2 (X)",
-        xaxis_title="Clasificacion Modelo XGBoost/ML",
-        yaxis_title="Clasificacion Modelo TensorFlow NN",
+        title="Heatmap de Actividad por Prestacion y Mes",
+        xaxis_title="Mes",
+        yaxis_title="Prestacion",
         template="plotly_dark",
-        height=500,
+        height=600,
         paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Inter", size=12, color="#FAFAFA")
-    )
-    
-    # Marcar la posicion actual
-    idx1 = clasificaciones.get(resultado1['clasificacion'], 0)
-    idx2 = clasificaciones.get(resultado2['clasificacion'], 0)
-    
-    fig.add_scatter(
-        x=[list(clasificaciones.keys())[idx2]],
-        y=[list(clasificaciones.keys())[idx1]],
-        mode='markers',
-        marker=dict(size=30, color='yellow', symbol='star', line=dict(color='white', width=2)),
-        name='Resultado Actual',
-        showlegend=True
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     
     return fig
@@ -519,142 +451,119 @@ def main():
         <h1 style='text-align: center; color: #E31E24; margin-bottom: 0;'>
             SWISS MEDICAL
         </h1>
-        <div class='subtitle' style='text-align: center;'>
-            Sistema de Auditoria Prestacional Comparativa
+        <div style='text-align: center; color: #B0B3B8; padding-bottom: 1rem; border-bottom: 2px solid #E31E24; margin-bottom: 2rem;'>
+            Sistema de Auditoria Prestacional y Analisis Temporal
         </div>
     """, unsafe_allow_html=True)
     
     # Cargar datos
-    datos_personal = cargar_datos_personal()
-    datos_grupo = cargar_datos_grupo()
+    datos = cargar_datos()
     
-    if datos_personal is None or datos_grupo is None:
-        st.error("Error al cargar los datos. Verifique que los archivos CSV esten disponibles.")
+    if datos is None:
+        st.error("Error al cargar los datos")
         return
     
-    # Sidebar con informacion
+    # Sidebar
     with st.sidebar:
         st.markdown("### INFORMACION DEL SISTEMA")
         st.markdown("---")
         
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Registros", f"{len(datos_personal):,}")
+            st.metric("Registros", f"{len(datos):,}")
         with col2:
-            st.metric("Prestadores", f"{datos_personal['ID'].nunique()}")
+            st.metric("Prestadores", f"{datos['ID'].nunique()}")
         
         st.markdown(f"**Ultima actualizacion:** {datetime.now().strftime('%d/%m/%Y')}")
+        st.markdown(f"**Rango temporal:** {datos['MesFecha'].min().strftime('%Y-%m')} a {datos['MesFecha'].max().strftime('%Y-%m')}")
         
         st.markdown("---")
-        st.markdown("### CLASIFICACION DE ALERTAS")
+        st.markdown("### EJEMPLOS PARA TESTEAR")
         st.markdown("""
-        <div style='padding: 0.5rem; background: #1B5E20; border-radius: 4px; margin: 0.5rem 0;'>
-            <strong>NORMAL</strong><br/>Dentro del rango esperado
-        </div>
-        <div style='padding: 0.5rem; background: #E65100; border-radius: 4px; margin: 0.5rem 0;'>
-            <strong>REVISAR</strong><br/>Desviacion moderada
-        </div>
-        <div style='padding: 0.5rem; background: #B71C1C; border-radius: 4px; margin: 0.5rem 0;'>
-            <strong>ALERTA ALTA</strong><br/>Requiere auditoria
-        </div>
-        <div style='padding: 0.5rem; background: #01579B; border-radius: 4px; margin: 0.5rem 0;'>
-            <strong>INUSUAL BAJO</strong><br/>Verificar error de carga
-        </div>
-        """, unsafe_allow_html=True)
+        **Auditoria:**
+        - Prestador: **P1**
+        - Prestacion: **Anteojos**
+        - Importe: **$900,000**
         
-        st.markdown("---")
-        st.markdown("### MODELOS COMPARADOS")
-        st.markdown("""
-        **Modelo 1: TensorFlow NN**
-        - Red neuronal multicapa
-        - MAE/MSE optimization
+        **Dashboard Temporal:**
+        - Prestador: **P5** (832 prestaciones)
+        - Prestador: **P147** (638 prestaciones)
+        - Prestador: **P32** (613 prestaciones)
         
-        **Modelo 2: XGBoost/ML**
-        - Gradient boosting
-        - Feature engineering avanzado
-        - Interpretabilidad SHAP
+        **Prestaciones comunes:**
+        - Consulta Ginecología
+        - Colposcopia
+        - Electrocardiograma
         """)
     
-    # Formulario de entrada
-    st.markdown("## DATOS DE LA FACTURA A AUDITAR")
+    # Tabs principales
+    tab1, tab2 = st.tabs(["AUDITORIA DE FACTURA", "DASHBOARD TEMPORAL"])
     
-    # Obtener listas unicas para autocomplete
-    prestadores_unicos = sorted(datos_personal['ID'].astype(str).unique().tolist())
+    # ============================================
+    # TAB 1: AUDITORIA
+    # ============================================
     
-    if 'Prestacion' in datos_personal.columns:
-        prestaciones_unicas = sorted(datos_personal['Prestacion'].dropna().unique().tolist())
-    else:
-        prestaciones_unicas = []
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Selectbox con búsqueda integrada (Streamlit lo hace automaticamente)
-        prestador = st.selectbox(
-            "PRESTADOR",
-            options=prestadores_unicos,
-            index=0 if prestadores_unicos else None,
-            help="Seleccione o escriba para buscar el prestador"
-        )
+    with tab1:
+        st.markdown("## DATOS DE LA FACTURA A AUDITAR")
         
-        tipo_clase = st.selectbox(
-            "TIPO CLASE CM",
-            options=["Ambulatorio", "Internacion", "Otros"],
-            help="Tipo de prestacion"
-        )
+        prestadores_unicos = sorted(datos['ID'].astype(str).unique().tolist())
+        prestaciones_unicas = sorted(datos['Prestacion'].dropna().unique().tolist())
         
-        nomenclador = st.text_input(
-            "NOMENCLADOR",
-            value="Intervenciones quirurgicas",
-            help="Clasificacion del nomenclador"
-        )
-    
-    with col2:
-        # Selectbox para prestaciones con búsqueda
-        prestacion = st.selectbox(
-            "PRESTACION",
-            options=prestaciones_unicas if prestaciones_unicas else [""],
-            index=0 if prestaciones_unicas else None,
-            help="Seleccione o escriba para buscar la prestacion"
-        )
+        col1, col2 = st.columns(2)
         
-        mes_liquidado = st.date_input(
-            "MES LIQUIDADO",
-            value=datetime.now(),
-            help="Fecha del registro a auditar"
-        )
-        
-        cantidad = st.number_input(
-            "CANTIDAD",
-            min_value=1,
-            value=1,
-            help="Cantidad de prestaciones"
-        )
-    
-    st.markdown("---")
-    
-    importe_cm = st.number_input(
-        "IMPORTE CM (EN PESOS)",
-        min_value=0.0,
-        value=900000.0,
-        step=1000.0,
-        format="%.2f",
-        help="Monto total de la factura"
-    )
-    
-    # Boton de auditoria
-    if st.button("REALIZAR AUDITORIA COMPARATIVA", use_container_width=True):
-        
-        with st.spinner("Procesando auditoria en ambos modelos..."):
+        with col1:
+            prestador = st.selectbox(
+                "PRESTADOR",
+                options=prestadores_unicos,
+                index=0,
+                help="Seleccione el prestador"
+            )
             
-            # Analisis con ambos modelos
-            resultados = {}
+            tipo_clase = st.selectbox(
+                "TIPO CLASE CM",
+                options=["Ambulatorio", "Internacion", "Otros"]
+            )
             
-            for nombre, datos in [("TensorFlow NN", datos_grupo), ("XGBoost ML", datos_personal)]:
+            nomenclador = st.text_input(
+                "NOMENCLADOR",
+                value="Intervenciones quirurgicas"
+            )
+        
+        with col2:
+            prestacion = st.selectbox(
+                "PRESTACION",
+                options=prestaciones_unicas,
+                index=0
+            )
+            
+            mes_liquidado = st.date_input(
+                "MES LIQUIDADO",
+                value=datetime.now()
+            )
+            
+            cantidad = st.number_input(
+                "CANTIDAD",
+                min_value=1,
+                value=1
+            )
+        
+        st.markdown("---")
+        
+        importe_cm = st.number_input(
+            "IMPORTE CM (EN PESOS)",
+            min_value=0.0,
+            value=900000.0,
+            step=1000.0,
+            format="%.2f"
+        )
+        
+        if st.button("REALIZAR AUDITORIA", use_container_width=True):
+            
+            with st.spinner("Procesando auditoria..."):
+                
                 hist = buscar_historico(datos, prestador, prestacion)
                 
                 if hist.empty:
-                    # Buscar solo por prestador
                     hist = datos[datos['ID'].astype(str).str.upper() == prestador.upper()]
                 
                 if not hist.empty:
@@ -666,137 +575,205 @@ def main():
                         
                         clasificacion, alerta_class, mensaje = clasificar_anomalia(z_score)
                         
-                        resultados[nombre] = {
-                            'stats': stats,
-                            'z_score': z_score,
-                            'dif_pct': dif_pct,
-                            'clasificacion': clasificacion,
-                            'alerta_class': alerta_class,
-                            'mensaje': mensaje,
-                            'encontrado': True
-                        }
-                    else:
-                        resultados[nombre] = {'encontrado': False, 'mensaje': 'Historico insuficiente'}
-                else:
-                    resultados[nombre] = {'encontrado': False, 'mensaje': 'Sin datos del prestador'}
-            
-            # Mostrar resultados
-            if all(r.get('encontrado', False) for r in resultados.values()):
-                
-                st.markdown("---")
-                st.markdown("## RESULTADOS DE LA AUDITORIA COMPARATIVA")
-                
-                # Vista comparativa lado a lado
-                col1, col2 = st.columns(2)
-                
-                for idx, (nombre_modelo, resultado) in enumerate(resultados.items()):
-                    with [col1, col2][idx]:
+                        st.markdown("---")
+                        st.markdown("## RESULTADO DE LA AUDITORIA")
+                        
                         st.markdown(f"""
-                        <div class='alert-box {resultado['alerta_class']}'>
-                            <div class='alert-title'>{resultado['clasificacion']}</div>
-                            <div class='alert-message'>{nombre_modelo}</div>
+                        <div class='alert-box {alerta_class}'>
+                            <div style='font-size: 1.5rem; font-weight: 700;'>{clasificacion}</div>
+                            <div style='font-size: 1rem;'>{mensaje}</div>
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        st.markdown(f"**{resultado['mensaje']}**")
-                        
                         # Metricas
-                        met1, met2, met3 = st.columns(3)
-                        with met1:
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
                             st.metric("Importe Facturado", f"${importe_cm:,.0f}")
-                        with met2:
-                            st.metric("Promedio Historico", f"${resultado['stats']['promedio']:,.0f}")
-                        with met3:
-                            st.metric("Z-Score", f"{resultado['z_score']:.2f}σ")
+                        with col2:
+                            st.metric("Promedio Historico", f"${stats['promedio']:,.0f}")
+                        with col3:
+                            st.metric("Z-Score", f"{z_score:.2f}σ")
+                        with col4:
+                            st.metric("Diferencia", f"{dif_pct:+.1f}%")
                         
-                        # Grafico de distribucion
-                        fig = crear_grafico_distribucion(
-                            resultado['stats'],
-                            importe_cm,
-                            f"Distribucion - {nombre_modelo}"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
+                        # Graficos
+                        st.markdown("### ANALISIS GRAFICO")
                         
-                        # Estadisticas detalladas en expander
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            fig_dist = crear_grafico_distribucion(stats, importe_cm, "Distribucion Historica")
+                            st.plotly_chart(fig_dist, use_container_width=True)
+                        
+                        with col2:
+                            # Crear boxplot simple de esta prestacion
+                            fig_box = go.Figure()
+                            fig_box.add_trace(go.Box(
+                                y=stats['datos'],
+                                name='CM',
+                                marker_color='#636EFA',
+                                boxmean='sd'
+                            ))
+                            fig_box.add_scatter(
+                                x=[0],
+                                y=[importe_cm],
+                                mode='markers',
+                                marker=dict(size=15, color='#E31E24', symbol='star'),
+                                name='Consulta'
+                            )
+                            fig_box.update_layout(
+                                title="Boxplot con Posicion de Consulta",
+                                yaxis_title="Costo Medico (CM)",
+                                template="plotly_dark",
+                                height=400,
+                                showlegend=True,
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                plot_bgcolor='rgba(0,0,0,0)'
+                            )
+                            st.plotly_chart(fig_box, use_container_width=True)
+                        
+                        # Estadisticas detalladas
                         with st.expander("VER ESTADISTICAS DETALLADAS"):
-                            st.markdown(f"""
-                            | Metrica | Valor |
-                            |---------|-------|
-                            | Promedio | ${resultado['stats']['promedio']:,.2f} |
-                            | Mediana | ${resultado['stats']['mediana']:,.2f} |
-                            | Desv. Std | ${resultado['stats']['std']:,.2f} |
-                            | Minimo | ${resultado['stats']['min']:,.2f} |
-                            | Maximo | ${resultado['stats']['max']:,.2f} |
-                            | Percentil 25 | ${resultado['stats']['q25']:,.2f} |
-                            | Percentil 75 | ${resultado['stats']['q75']:,.2f} |
-                            | Percentil 90 | ${resultado['stats']['q90']:,.2f} |
-                            | Percentil 95 | ${resultado['stats']['q95']:,.2f} |
-                            | N° Registros | {resultado['stats']['n_registros']} |
-                            | Diferencia % | {resultado['dif_pct']:+.1f}% |
-                            """)
-                
-                # Matriz de decision
-                st.markdown("---")
-                st.markdown("## MATRIZ DE DECISION FINAL")
-                
-                fig_matriz = crear_matriz_decision(
-                    resultados["TensorFlow NN"],
-                    resultados["XGBoost ML"]
-                )
-                st.plotly_chart(fig_matriz, use_container_width=True)
-                
-                # Conclusion final
-                st.markdown("---")
-                st.markdown("## CONCLUSION FINAL")
-                
-                clasificaciones = [r['clasificacion'] for r in resultados.values()]
-                
-                if all(c == "NORMAL" for c in clasificaciones):
-                    conclusion_class = "alert-normal"
-                    conclusion_texto = "APROBAR - Ambos modelos clasifican el importe como normal"
-                    recomendacion = ["Aprobar la factura", "Proceder con el pago"]
-                elif "ALERTA ALTA" in clasificaciones:
-                    conclusion_class = "alert-danger"
-                    conclusion_texto = "RECHAZAR O SUSPENDER - Al menos un modelo detecta anomalia critica"
-                    recomendacion = [
-                        "RECHAZAR o SUSPENDER el pago",
-                        "Solicitar auditoria medica detallada",
-                        "Pedir documentacion respaldatoria",
-                        f"El importe excede el promedio en {max([r['dif_pct'] for r in resultados.values()]):.0f}%"
-                    ]
-                elif any(c == "REVISAR" for c in clasificaciones):
-                    conclusion_class = "alert-warning"
-                    conclusion_texto = "REVISAR - Requiere justificacion adicional"
-                    recomendacion = [
-                        "Solicitar justificacion del prestador",
-                        "Verificar complejidad del caso",
-                        "Comparar con casos similares"
-                    ]
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.markdown(f"""
+                                | Metrica | Valor |
+                                |---------|-------|
+                                | Promedio | ${stats['promedio']:,.2f} |
+                                | Mediana | ${stats['mediana']:,.2f} |
+                                | Desv. Std | ${stats['std']:,.2f} |
+                                | N° Registros | {stats['n_registros']} |
+                                """)
+                            with col2:
+                                st.markdown(f"""
+                                | Metrica | Valor |
+                                |---------|-------|
+                                | Minimo | ${stats['min']:,.2f} |
+                                | Maximo | ${stats['max']:,.2f} |
+                                | Percentil 90 | ${stats['q90']:,.2f} |
+                                | Percentil 95 | ${stats['q95']:,.2f} |
+                                """)
+                        
+                        # Recomendaciones
+                        st.markdown("### RECOMENDACIONES")
+                        if clasificacion == "NORMAL":
+                            st.markdown("- Aprobar la factura\n- Proceder con el pago")
+                        elif clasificacion == "REVISAR":
+                            st.markdown("- Solicitar justificacion\n- Verificar complejidad\n- Comparar casos similares")
+                        elif clasificacion == "ALERTA ALTA":
+                            st.markdown(f"- RECHAZAR o SUSPENDER\n- Auditoria obligatoria\n- Excede promedio en {abs(dif_pct):.0f}%")
+                        else:
+                            st.markdown("- Verificar error de carga\n- Consultar area medica")
+                    
+                    else:
+                        st.error("Historico insuficiente")
                 else:
-                    conclusion_class = "alert-info"
-                    conclusion_texto = "VERIFICAR - Patron inusual detectado"
-                    recomendacion = [
-                        "Verificar si hay error de carga",
-                        "Consultar con el area medica"
-                    ]
+                    st.error(f"Sin datos del prestador {prestador}")
+    
+    # ============================================
+    # TAB 2: DASHBOARD TEMPORAL
+    # ============================================
+    
+    with tab2:
+        st.markdown("## ANALISIS TEMPORAL DEL PRESTADOR")
+        
+        prestador_dashboard = st.selectbox(
+            "SELECCIONE PRESTADOR PARA ANALIZAR",
+            options=sorted(datos['ID'].astype(str).unique().tolist()),
+            key="dashboard_prestador"
+        )
+        
+        if st.button("GENERAR DASHBOARD", use_container_width=True):
+            
+            with st.spinner("Generando analisis temporal..."):
                 
-                st.markdown(f"""
-                <div class='alert-box {conclusion_class}'>
-                    <div class='alert-title'>DECISION FINAL</div>
-                    <div class='alert-message'>{conclusion_texto}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                df_prestador = datos[datos['ID'] == prestador_dashboard].copy()
                 
-                st.markdown("### RECOMENDACIONES")
-                for rec in recomendacion:
-                    st.markdown(f"- {rec}")
-                
-            else:
-                st.error("No se pudieron obtener resultados de uno o ambos modelos. Verifique los datos ingresados.")
+                if len(df_prestador) == 0:
+                    st.error(f"Sin datos del prestador {prestador_dashboard}")
+                else:
+                    # Metricas generales
+                    st.markdown("### METRICAS GENERALES DEL PRESTADOR")
+                    
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                    
+                    with col1:
+                        st.metric("Prestaciones Unicas", df_prestador['Prestacion'].nunique())
+                    with col2:
+                        st.metric("Total Registros", len(df_prestador))
+                    with col3:
+                        cm_total = df_prestador['CM'].sum()
+                        st.metric("CM Total", f"${cm_total:,.0f}")
+                    with col4:
+                        cm_promedio = df_prestador['CM'].mean()
+                        st.metric("CM Promedio", f"${cm_promedio:,.0f}")
+                    with col5:
+                        meses = df_prestador['MesFecha'].nunique()
+                        st.metric("Meses Activos", meses)
+                    
+                    st.markdown("---")
+                    
+                    # Graficos temporales
+                    st.markdown("### EVOLUCION TEMPORAL")
+                    
+                    fig_evol = crear_grafico_evolucion_cm(df_prestador)
+                    st.plotly_chart(fig_evol, use_container_width=True)
+                    
+                    fig_pu = crear_grafico_variacion_pu(df_prestador)
+                    st.plotly_chart(fig_pu, use_container_width=True)
+                    
+                    # Heatmap
+                    st.markdown("### HEATMAP DE ACTIVIDAD")
+                    fig_heat = crear_heatmap_temporal(df_prestador)
+                    st.plotly_chart(fig_heat, use_container_width=True)
+                    
+                    # Boxplot comparativo
+                    st.markdown("### DISTRIBUCION DE COSTOS POR PRESTACION")
+                    fig_box = crear_grafico_boxplot(df_prestador)
+                    st.plotly_chart(fig_box, use_container_width=True)
+                    
+                    # Tabla resumen
+                    st.markdown("### TABLA RESUMEN POR PRESTACION")
+                    resumen = crear_tabla_resumen(df_prestador)
+                    
+                    # Formatear columnas monetarias
+                    st.dataframe(
+                        resumen.style.format({
+                            'CM_Total': '${:,.2f}',
+                            'CM_Promedio': '${:,.2f}',
+                            'CM_Std': '${:,.2f}',
+                            'CM_Min': '${:,.2f}',
+                            'CM_Max': '${:,.2f}',
+                            'PU_Promedio': '${:,.2f}',
+                            'Q_Total': '{:,.0f}',
+                            'Variacion_PU_%': '{:+.1f}%'
+                        }),
+                        use_container_width=True
+                    )
+                    
+                    # Insights automáticos
+                    st.markdown("### INSIGHTS AUTOMATICOS")
+                    
+                    # Prestacion con mayor crecimiento
+                    df_crecimiento = df_prestador.groupby('Prestacion').apply(
+                        lambda x: ((x['CM'].iloc[-1] - x['CM'].iloc[0]) / x['CM'].iloc[0] * 100) if len(x) > 1 else 0
+                    ).sort_values(ascending=False)
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**MAYOR CRECIMIENTO DE CM:**")
+                        for i, (prest, crec) in enumerate(df_crecimiento.head(5).items(), 1):
+                            st.markdown(f"{i}. {prest}: **+{crec:.1f}%**")
+                    
+                    with col2:
+                        st.markdown("**MAYOR DECRECIMIENTO DE CM:**")
+                        for i, (prest, crec) in enumerate(df_crecimiento.tail(5).items(), 1):
+                            st.markdown(f"{i}. {prest}: **{crec:.1f}%**")
     
     # Footer
     st.markdown("""
-    <div class='footer'>
+    <div style='text-align: center; padding: 2rem 0; color: #B0B3B8; border-top: 1px solid #3A3F4B; margin-top: 3rem;'>
         Swiss Medical S.A. | Sistema de Auditoria Automatizada v3.0 | Powered by AI/ML
     </div>
     """, unsafe_allow_html=True)
