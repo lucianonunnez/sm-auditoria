@@ -497,7 +497,7 @@ def main():
         """)
     
     # Tabs principales
-    tab1, tab2 = st.tabs(["AUDITORIA DE FACTURA", "DASHBOARD TEMPORAL"])
+    tab1, tab2, tab3 = st.tabs(["AUDITORIA DE FACTURA", "DASHBOARD TEMPORAL", "ANALISIS DE VARIACIONES"])
     
     # ============================================
     # TAB 1: AUDITORIA
@@ -770,6 +770,306 @@ def main():
                         st.markdown("**MAYOR DECRECIMIENTO DE CM:**")
                         for i, (prest, crec) in enumerate(df_crecimiento.tail(5).items(), 1):
                             st.markdown(f"{i}. {prest}: **{crec:.1f}%**")
+    
+    # ============================================
+    # TAB 3: ANALISIS DE VARIACIONES
+    # ============================================
+    
+    with tab3:
+        st.markdown("## ANALISIS DE VARIACIONES DE PRECIOS POR PRESTADOR")
+        
+        col1, col2, col3 = st.columns([2, 2, 2])
+        
+        with col1:
+            prestador_var = st.selectbox(
+                "SELECCIONE PRESTADOR",
+                options=sorted(datos['ID'].astype(str).unique().tolist()),
+                key="var_prestador"
+            )
+        
+        with col2:
+            usar_todo = st.checkbox("USAR TODO EL PERIODO", value=True)
+            
+        with col3:
+            tipo_variacion = st.selectbox(
+                "FILTRAR POR",
+                options=["Todas", "Solo Aumentos", "Solo Decrementos", "Variacion >50%", "Variacion >100%"]
+            )
+        
+        if not usar_todo:
+            col1, col2 = st.columns(2)
+            with col1:
+                fecha_inicio = st.date_input(
+                    "FECHA INICIO",
+                    value=datos['MesFecha'].min(),
+                    min_value=datos['MesFecha'].min(),
+                    max_value=datos['MesFecha'].max()
+                )
+            with col2:
+                fecha_fin = st.date_input(
+                    "FECHA FIN",
+                    value=datos['MesFecha'].max(),
+                    min_value=datos['MesFecha'].min(),
+                    max_value=datos['MesFecha'].max()
+                )
+        else:
+            fecha_inicio = datos['MesFecha'].min()
+            fecha_fin = datos['MesFecha'].max()
+        
+        if st.button("ANALIZAR VARIACIONES", use_container_width=True, key="btn_variaciones"):
+            
+            with st.spinner("Analizando variaciones de precios..."):
+                
+                # Filtrar datos del prestador
+                df_prest = datos[datos['ID'] == prestador_var].copy()
+                
+                if len(df_prest) == 0:
+                    st.error(f"Sin datos del prestador {prestador_var}")
+                else:
+                    # Filtrar por rango de fechas
+                    df_prest = df_prest[
+                        (df_prest['MesFecha'] >= pd.to_datetime(fecha_inicio)) &
+                        (df_prest['MesFecha'] <= pd.to_datetime(fecha_fin))
+                    ]
+                    
+                    if len(df_prest) == 0:
+                        st.error("Sin datos en el periodo seleccionado")
+                    else:
+                        # Calcular variaciones por prestación
+                        variaciones = []
+                        
+                        for prestacion in df_prest['Prestacion'].unique():
+                            df_p = df_prest[df_prest['Prestacion'] == prestacion].copy()
+                            df_p = df_p[df_p['PU'].notna()].sort_values('MesFecha')
+                            
+                            if len(df_p) >= 2:
+                                # Primer y último precio
+                                pu_inicial = df_p['PU'].iloc[0]
+                                pu_final = df_p['PU'].iloc[-1]
+                                fecha_inicial = df_p['MesFecha'].iloc[0]
+                                fecha_final = df_p['MesFecha'].iloc[-1]
+                                
+                                # CM inicial y final
+                                cm_inicial = df_p['CM'].iloc[0]
+                                cm_final = df_p['CM'].iloc[-1]
+                                
+                                # Calcular variación
+                                var_abs = pu_final - pu_inicial
+                                var_pct = (var_abs / pu_inicial * 100) if pu_inicial > 0 else 0
+                                
+                                # Volumen
+                                q_total = df_p['Q'].sum()
+                                n_registros = len(df_p)
+                                
+                                variaciones.append({
+                                    'Prestacion': prestacion,
+                                    'Fecha_Inicial': fecha_inicial,
+                                    'Fecha_Final': fecha_final,
+                                    'PU_Inicial': pu_inicial,
+                                    'PU_Final': pu_final,
+                                    'Variacion_Abs': var_abs,
+                                    'Variacion_Pct': var_pct,
+                                    'CM_Inicial': cm_inicial,
+                                    'CM_Final': cm_final,
+                                    'Q_Total': q_total,
+                                    'N_Registros': n_registros
+                                })
+                        
+                        if len(variaciones) == 0:
+                            st.error("No hay suficientes datos para calcular variaciones")
+                        else:
+                            df_var = pd.DataFrame(variaciones)
+                            
+                            # Aplicar filtros
+                            if tipo_variacion == "Solo Aumentos":
+                                df_var = df_var[df_var['Variacion_Pct'] > 0]
+                            elif tipo_variacion == "Solo Decrementos":
+                                df_var = df_var[df_var['Variacion_Pct'] < 0]
+                            elif tipo_variacion == "Variacion >50%":
+                                df_var = df_var[abs(df_var['Variacion_Pct']) > 50]
+                            elif tipo_variacion == "Variacion >100%":
+                                df_var = df_var[abs(df_var['Variacion_Pct']) > 100]
+                            
+                            # Ordenar por variación absoluta
+                            df_var = df_var.sort_values('Variacion_Pct', ascending=False)
+                            
+                            # Métricas generales
+                            st.markdown("### RESUMEN GENERAL")
+                            
+                            col1, col2, col3, col4, col5 = st.columns(5)
+                            
+                            with col1:
+                                st.metric("Prestaciones Analizadas", len(df_var))
+                            with col2:
+                                aumentos = len(df_var[df_var['Variacion_Pct'] > 0])
+                                st.metric("Aumentos", aumentos)
+                            with col3:
+                                decrementos = len(df_var[df_var['Variacion_Pct'] < 0])
+                                st.metric("Decrementos", decrementos)
+                            with col4:
+                                var_promedio = df_var['Variacion_Pct'].mean()
+                                st.metric("Variacion Promedio", f"{var_promedio:+.1f}%")
+                            with col5:
+                                var_maxima = df_var['Variacion_Pct'].max()
+                                st.metric("Variacion Maxima", f"{var_maxima:+.1f}%")
+                            
+                            st.markdown("---")
+                            
+                            # Gráfico de barras de variaciones
+                            st.markdown("### GRAFICO DE VARIACIONES")
+                            
+                            # Top 20 para visualización
+                            df_plot = df_var.head(20)
+                            
+                            fig_var = go.Figure()
+                            
+                            colors = ['#E31E24' if v > 0 else '#4CAF50' for v in df_plot['Variacion_Pct']]
+                            
+                            fig_var.add_trace(go.Bar(
+                                x=df_plot['Variacion_Pct'],
+                                y=[p[:50] for p in df_plot['Prestacion']],
+                                orientation='h',
+                                marker_color=colors,
+                                text=[f"{v:+.1f}%" for v in df_plot['Variacion_Pct']],
+                                textposition='auto',
+                                hovertemplate='<b>%{y}</b><br>Variacion: %{x:+.1f}%<extra></extra>'
+                            ))
+                            
+                            fig_var.update_layout(
+                                title=f"Top 20 Variaciones de Precio - {prestador_var}",
+                                xaxis_title="Variacion Porcentual (%)",
+                                yaxis_title="Prestacion",
+                                template="plotly_dark",
+                                height=max(600, len(df_plot) * 30),
+                                showlegend=False,
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                plot_bgcolor='rgba(0,0,0,0)'
+                            )
+                            
+                            fig_var.update_yaxes(autorange="reversed")
+                            
+                            st.plotly_chart(fig_var, use_container_width=True)
+                            
+                            # Gráfico de comparación temporal
+                            st.markdown("### COMPARACION PRECIO INICIAL VS FINAL")
+                            
+                            fig_comp = go.Figure()
+                            
+                            df_plot_comp = df_var.head(15)
+                            
+                            fig_comp.add_trace(go.Bar(
+                                name='Precio Inicial',
+                                x=[p[:40] for p in df_plot_comp['Prestacion']],
+                                y=df_plot_comp['PU_Inicial'],
+                                marker_color='#636EFA'
+                            ))
+                            
+                            fig_comp.add_trace(go.Bar(
+                                name='Precio Final',
+                                x=[p[:40] for p in df_plot_comp['Prestacion']],
+                                y=df_plot_comp['PU_Final'],
+                                marker_color='#E31E24'
+                            ))
+                            
+                            fig_comp.update_layout(
+                                title=f"Comparacion de Precios - Top 15 Variaciones",
+                                xaxis_title="Prestacion",
+                                yaxis_title="Precio Unitario ($)",
+                                template="plotly_dark",
+                                height=500,
+                                barmode='group',
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                plot_bgcolor='rgba(0,0,0,0)'
+                            )
+                            
+                            st.plotly_chart(fig_comp, use_container_width=True)
+                            
+                            # Tabla completa
+                            st.markdown("### TABLA DETALLADA DE VARIACIONES")
+                            
+                            # Preparar tabla para mostrar
+                            df_display = df_var.copy()
+                            df_display['Fecha_Inicial'] = df_display['Fecha_Inicial'].dt.strftime('%Y-%m')
+                            df_display['Fecha_Final'] = df_display['Fecha_Final'].dt.strftime('%Y-%m')
+                            
+                            # Mostrar con formato
+                            st.dataframe(
+                                df_display.style.format({
+                                    'PU_Inicial': '${:,.2f}',
+                                    'PU_Final': '${:,.2f}',
+                                    'Variacion_Abs': '${:+,.2f}',
+                                    'Variacion_Pct': '{:+.2f}%',
+                                    'CM_Inicial': '${:,.2f}',
+                                    'CM_Final': '${:,.2f}',
+                                    'Q_Total': '{:,.0f}',
+                                    'N_Registros': '{:.0f}'
+                                }).background_gradient(
+                                    subset=['Variacion_Pct'],
+                                    cmap='RdYlGn_r',
+                                    vmin=-100,
+                                    vmax=100
+                                ),
+                                use_container_width=True,
+                                height=400
+                            )
+                            
+                            # Botón de descarga
+                            csv = df_var.to_csv(index=False)
+                            st.download_button(
+                                label="DESCARGAR CSV",
+                                data=csv,
+                                file_name=f"variaciones_{prestador_var}_{fecha_inicio}_{fecha_fin}.csv",
+                                mime="text/csv",
+                                use_container_width=True
+                            )
+                            
+                            # Insights destacados
+                            st.markdown("### INSIGHTS DESTACADOS")
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.markdown("**MAYORES AUMENTOS:**")
+                                top_aumentos = df_var[df_var['Variacion_Pct'] > 0].head(5)
+                                for i, row in enumerate(top_aumentos.itertuples(), 1):
+                                    st.markdown(f"{i}. **{row.Prestacion[:50]}**: +{row.Variacion_Pct:.1f}% (${row.PU_Inicial:,.0f} → ${row.PU_Final:,.0f})")
+                            
+                            with col2:
+                                st.markdown("**MAYORES DECREMENTOS:**")
+                                top_decrementos = df_var[df_var['Variacion_Pct'] < 0].tail(5)
+                                for i, row in enumerate(top_decrementos.itertuples(), 1):
+                                    st.markdown(f"{i}. **{row.Prestacion[:50]}**: {row.Variacion_Pct:.1f}% (${row.PU_Inicial:,.0f} → ${row.PU_Final:,.0f})")
+                            
+                            # Alertas automáticas
+                            st.markdown("---")
+                            st.markdown("### ALERTAS AUTOMATICAS")
+                            
+                            alertas = []
+                            
+                            # Aumentos extremos (>100%)
+                            extremos = df_var[df_var['Variacion_Pct'] > 100]
+                            if len(extremos) > 0:
+                                alertas.append(f"⚠️ **{len(extremos)} prestaciones** con aumentos superiores al 100%")
+                            
+                            # Decrementos sospechosos
+                            decrementos_grandes = df_var[df_var['Variacion_Pct'] < -50]
+                            if len(decrementos_grandes) > 0:
+                                alertas.append(f"🔵 **{len(decrementos_grandes)} prestaciones** con decrementos >50% (posibles errores)")
+                            
+                            # Sin cambios
+                            sin_cambios = df_var[abs(df_var['Variacion_Pct']) < 1]
+                            if len(sin_cambios) > 0:
+                                alertas.append(f"ℹ️ **{len(sin_cambios)} prestaciones** sin variación significativa (<1%)")
+                            
+                            # Variación promedio alta
+                            if var_promedio > 50:
+                                alertas.append(f"⚠️ Variación promedio del prestador es **{var_promedio:.1f}%** (muy alta)")
+                            
+                            if alertas:
+                                for alerta in alertas:
+                                    st.markdown(alerta)
+                            else:
+                                st.info("✅ No se detectaron anomalías significativas en las variaciones")
     
     # Footer
     st.markdown("""
